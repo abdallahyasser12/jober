@@ -21,15 +21,15 @@ The canon (§2) fixes the style: cloud-native microservices on Kubernetes, an ev
 
 | Style element | Driving force | Consequence accepted |
 |---|---|---|
-| Microservices (32-service catalog per canon §4) | Three heterogeneous runtimes (NestJS/TypeScript control plane, Python AI plane, Go infrastructure); wildly divergent scaling profiles (CRUD APIs vs. browser pods vs. crawl fleets); fault isolation between hostile-web workloads and the user-facing control plane | Distributed-systems tax: tracing, contract management, deployment orchestration — mitigated by paved-road service chassis and mesh (see §14.1) |
+| Microservices (canonical 30-service catalog per canon §4) | Three heterogeneous runtimes (NestJS/TypeScript control plane, Python AI plane, Go infrastructure); wildly divergent scaling profiles (CRUD APIs vs. browser pods vs. crawl fleets); fault isolation between hostile-web workloads and the user-facing control plane | Distributed-systems tax: tracing, contract management, deployment orchestration — mitigated by paved-road service chassis and mesh (see §15.1) |
 | Event-driven backbone (Kafka) | Core value chain (discover → parse → match → draft → apply → learn) is a pipeline of independent, retryable stages with fan-out consumers; producers must not know consumers | Eventual consistency in read paths; consumer idempotency is mandatory everywhere (canon §8) |
-| Durable execution (Temporal via `workflow-service`) | Application submission spans minutes-to-days (HITL approvals, portal retries); crash-safe progress and compensation cannot be hand-rolled per service | Temporal operational footprint + workflow versioning discipline (see §14.2) |
+| Durable execution (Temporal via `workflow-service`) | Application submission spans minutes-to-days (HITL approvals, portal retries); crash-safe progress and compensation cannot be hand-rolled per service | Temporal operational footprint + workflow versioning discipline (see §15.2) |
 | AI-native control plane | LLM calls are the product's marginal cost and quality driver; they must be routed, cached, budgeted, evaluated, and audited centrally | Every model call pays one extra hop through `ai-gateway`; accepted for governability (canon §9) |
 | Multi-tenancy with cells | Tenant classes from `individual` to `enterprise` with data-residency and blast-radius requirements | Cell routing layer and per-cell capacity management (see §8) |
 | Zero trust + policy externalization (OPA via `policy-service`) | Agents act with user credentials against third-party sites; authorization must be provable, auditable, and revocable at user/tenant/platform scope | Policy evaluation on every consequential hop; latency budgeted at p99 ≤ 5 ms per check (sidecar, local bundle) |
 | Vendor-agnostic seams | LLM pricing/capability churn; enterprise on-prem storage demands; payment-provider regionality | Interface indirection (`ai-gateway` model classes, `embedding-store`, `graph-store`, billing adapter) instead of direct SDK usage |
 
-What the style is **not**: it is not "microservices because they are fashionable." The decomposition follows data ownership (canon §11 — one logical database per service, no cross-service DB access) and team topology; §14.1 documents why a modular monolith was rejected despite its genuinely lower operating cost.
+What the style is **not**: it is not "microservices because they are fashionable." The decomposition follows data ownership (canon §11 — one logical database per service, no cross-service DB access) and team topology; §15.1 documents why a modular monolith was rejected despite its genuinely lower operating cost.
 
 ## 3. Container View — the Service Catalog by Domain
 
@@ -154,7 +154,7 @@ flowchart TB
     aig --> llm
 ```
 
-**Purpose and responsibilities (delta over canon §4.4).** `workflow-service` wraps Temporal and its worker fleets; every multi-service or long-running flow (autopilot cadence, application submission saga, import pipelines, re-crawls) is a workflow, never an ad-hoc chain of events (§14.2). `agent-orchestrator` executes the agent loop (§6) for all 23 agents on a shared Python runtime; agents are logical workers, not microservices — a deliberate decision to avoid 23 more deployables (canon §5). `ai-gateway` is the sole path to any model (canon §9 invariant); it assembles context deterministically for cache-friendliness, enforces the escalation ladder, and emits `aca.ai.request.completed.v1` for every call. The browser plane isolates all contact with the hostile web: `browser-fleet-service` schedules ephemeral gVisor-sandboxed pods, `session-vault-service` injects credentials only at the egress sidecar (never into agent context), `proxy-manager` owns per-site rate budgets and IP reputation, and `portal-intelligence-service` holds the Universal Portal Engine's learned templates (canon §16, detail in [Volume 7](../volume-7-browser-intelligence/)).
+**Purpose and responsibilities (delta over canon §4.4).** `workflow-service` wraps Temporal and its worker fleets; every multi-service or long-running flow (autopilot cadence, application submission saga, import pipelines, re-crawls) is a workflow, never an ad-hoc chain of events (§15.2). `agent-orchestrator` executes the agent loop (§6) for all 23 agents on a shared Python runtime; agents are logical workers, not microservices — a deliberate decision to avoid 23 more deployables (canon §5). `ai-gateway` is the sole path to any model (canon §9 invariant); it assembles context deterministically for cache-friendliness, enforces the escalation ladder, and emits `aca.ai.request.completed.v1` for every call. The browser plane isolates all contact with the hostile web: `browser-fleet-service` schedules ephemeral gVisor-sandboxed pods, `session-vault-service` injects credentials only at the egress sidecar (never into agent context), `proxy-manager` owns per-site rate budgets and IP reputation, and `portal-intelligence-service` holds the Universal Portal Engine's learned templates (canon §16, detail in [Volume 7](../volume-7-browser-intelligence/)).
 
 **Interactions worth pinning at Level 2:** `agent-orchestrator` → `ai-gateway` is gRPC with a streaming response path (agent planning is latency-sensitive); `cost-controller` → `ai-gateway` budget distribution is push-based (Redis-backed snapshots refreshed ≤ 5 s, so budget enforcement never adds a synchronous hop to a model call); `browser-fleet-service` sessions are Temporal activities with heartbeats, so a crashed browser pod is retried by the saga, not lost.
 
@@ -240,7 +240,7 @@ The single most common architecture review question is "should this be a call or
 
 ## 5. C4 Level 1 Summary
 
-The Level 1 context is specified in [07 — System Context](07-system-context.md). For Level 2 purposes, four boundary facts shape the containers: (1) all inbound traffic — first-party clients, partner API calls, provider webhooks — enters via `api-gateway` (with `realtime-gateway` for server-push only); (2) all outbound traffic to the hostile web (job boards, portals) leaves via `proxy-manager`-managed egress from either the crawl fleet or `browser-fleet-service`; (3) all model traffic leaves via `ai-gateway`; (4) all money flows via `billing-service`'s provider adapter. There are exactly four egress chokepoints, and each is a policy- and observability-enforcement point. Any design that adds a fifth external touchpoint requires canon amendment.
+The Level 1 context is specified in [07 — System Context](07-system-context.md). For Level 2 purposes, four boundary facts shape the containers: (1) all inbound traffic — first-party clients, partner API calls, provider webhooks — enters via `api-gateway` (with `realtime-gateway` for server-push only); (2) all outbound traffic to the hostile web (job boards, portals) leaves via `proxy-manager`-managed egress from either the crawl fleet or `browser-fleet-service`; (3) all model traffic leaves via `ai-gateway`; (4) all money flows via `billing-service`'s provider adapter. There are exactly four external-traffic chokepoints — one ingress, three egress — and each is a policy- and observability-enforcement point. Any design that adds a fifth external touchpoint requires canon amendment.
 
 ## 6. The Canonical Agent Loop
 
@@ -369,16 +369,16 @@ Global-versus-cell tension is real for the job corpus: jobs are global, matches 
 
 ## 9. Top Architectural Decisions
 
-The fifteen-decision list lives in [01 — Executive Summary](01-executive-summary.md). This chapter owns the three that define the macro-architecture; each is argued in §14 with alternatives and honest tradeoffs. Summary:
+The fifteen-decision list (D1–D15) lives in [01 — Executive Summary](01-executive-summary.md). This chapter owns the three that define the macro-architecture; each is argued in §15 with alternatives and honest tradeoffs. Decision identifiers below are chapter-local (`HLA-D*`) to avoid collision with the executive summary's D1–D15 numbering. Summary:
 
 | # | Decision | Chosen | Rejected alternatives | Argued in |
 |---|---|---|---|---|
-| D1 | Decomposition granularity | Microservices per canon catalog, three language stacks, paved-road chassis | Modular monolith; "macroservices" (5–6 coarse services) | §14.1 |
-| D2 | Cross-service coordination | Orchestration: Temporal sagas for all multi-service transactions; choreography only for unidirectional fan-out | Pure choreography; hand-rolled saga state machines in each service | §14.2 |
-| D3 | LLM provider strategy | Multi-provider behind `ai-gateway` model classes; Anthropic Claude family primary; self-hosted vLLM floor | Single provider; per-team provider freedom | §14.3 |
-| D4 | Tenancy isolation | Shared-schema RLS + cells (not schema-per-tenant) | Schema-per-tenant; DB-per-tenant | [Volume 4](../volume-4-data-platform/) |
-| D5 | Vector/graph stores | pgvector + Apache AGE phase 1 behind interfaces | Dedicated Qdrant/Neo4j day 1 | [Volume 4](../volume-4-data-platform/) |
-| D6 | Portal automation | Universal Portal Engine (learned templates) | Hardcoded per-ATS adapters | [Volume 7](../volume-7-browser-intelligence/) |
+| HLA-D1 | Decomposition granularity | Microservices per canon catalog, three language stacks, paved-road chassis | Modular monolith; "macroservices" (5–6 coarse services) | §15.1 |
+| HLA-D2 | Cross-service coordination | Orchestration: Temporal sagas for all multi-service transactions; choreography only for unidirectional fan-out | Pure choreography; hand-rolled saga state machines in each service | §15.2 |
+| HLA-D3 | LLM provider strategy | Multi-provider behind `ai-gateway` model classes; Anthropic Claude family primary; self-hosted vLLM floor | Single provider; per-team provider freedom | §15.3 |
+| HLA-D4 | Tenancy isolation | Shared-schema RLS + cells (not schema-per-tenant) | Schema-per-tenant; DB-per-tenant | [Volume 4](../volume-4-data-platform/) |
+| HLA-D5 | Vector/graph stores | pgvector + Apache AGE phase 1 behind interfaces | Dedicated Qdrant/Neo4j day 1 | [Volume 4](../volume-4-data-platform/) |
+| HLA-D6 | Portal automation | Universal Portal Engine (learned templates) | Hardcoded per-ATS adapters | [Volume 7](../volume-7-browser-intelligence/) |
 
 ## 10. Failure Scenarios
 
@@ -404,23 +404,32 @@ Chapter-level (macro) failure modes; per-service scenarios live in service chapt
 
 ## 12. Security Considerations
 
-Level-2 security posture (full treatment in [Volume 5](../volume-5-security/)): zero-trust mesh (Istio mTLS + SPIFFE identities) with OPA authorization on every internal hop; the four egress chokepoints of §5 double as the four egress policy-enforcement points; P0 credentials exist only inside `session-vault-service` and its egress-injection sidecar path — no P0 material in Kafka, logs, prompts, or agent context, ever; all external content entering prompts is wrapped `untrusted_content` and screened (`security-agent`); every consequential action carries a policy decision record into `audit-service`'s hash chain. The container decomposition itself is a security control: the browser plane's blast radius (compromised page, malicious DOM) is bounded by gVisor sandboxing, per-session network policy, and the absence of any credential or token in the browser pod beyond the injected session.
+Level-2 security posture (full treatment in [Volume 5](../volume-5-security/)): zero-trust mesh (Istio mTLS + SPIFFE identities) with OPA authorization on every internal hop; the four external-traffic chokepoints of §5 double as policy-enforcement points; P0 credentials exist only inside `session-vault-service` and its egress-injection sidecar path — no P0 material in Kafka, logs, prompts, or agent context, ever; all external content entering prompts is wrapped `untrusted_content` and screened (`security-agent`); every consequential action carries a policy decision record into `audit-service`'s hash chain. The container decomposition itself is a security control: the browser plane's blast radius (compromised page, malicious DOM) is bounded by gVisor sandboxing, per-session network policy, and the absence of any credential or token in the browser pod beyond the injected session.
 
 ## 13. Observability
 
 The pipeline of §7 is instrumented as a first-class trace: `trace_id` propagates from the schedule trigger through every topic (`traceparent` extension) and Temporal workflow, so one trace shows discover→submit end-to-end. Golden dashboards at this level: (1) value-chain stage latency vs. the §7 budget table, (2) consumer lag by topic vs. the 30 s p95 bound, (3) autonomy funnel (drafted → approved → submitted) by tenant plan, (4) budget burn by scope (`cost-controller` aggregates), (5) cell health scorecards. Alerting follows canonical burn-rate policy (2%/1h, 5%/6h) on the golden SLOs (canon §14).
 
-## 14. Alternatives Considered & Tradeoffs
+## 14. Future Improvements
 
-### 14.1 D1 — Modular Monolith vs. Microservices
+1. **Post-GA consolidation review** of the profile domain (`portfolio-service` → `profile-service` merge candidate) with production traffic data — the catalog should shrink if reality permits (§15.1).
+2. **Cell auto-placement and live rebalancing** — phase 1 places new tenants only; phase 2 adds runbook-automated tenant migration and cell auto-provisioning on capacity signals.
+3. **Active-active edge** (canon §15 phase 2): stateless edge and read paths served from both regions; requires cell-aware global routing at DNS/gateway level.
+4. **ClickHouse analytics offload** (canon-flagged phase 2 option) once Postgres OLAP projections in `analytics-service` show contention.
+5. **Choreography-vs-orchestration audit** twice yearly: reclassify flows that drifted into the wrong mechanism (R2/R3 boundary), with workflow-count and event-consumer-count as drift indicators.
+6. **Formalized latency-budget contracts** per pipeline stage (§7 table) promoted into SLO tooling with per-stage error budgets rather than end-to-end only.
+
+## 15. Alternatives Considered & Tradeoffs
+
+### 15.1 HLA-D1 — Modular Monolith vs. Microservices
 
 **Chosen:** microservices per the canon catalog. **Considered seriously:** (a) a modular monolith (single deployable, enforced module boundaries, one Postgres with schemas per module) with the browser fleet as the only satellite; (b) "macroservices" — 5–6 coarse services along the five domain groups.
 
 The modular monolith is the right default for most SaaS at this stage, and the case for it was strong: one deployment pipeline, in-process calls instead of a mesh, trivially consistent transactions, a fraction of the observability surface. It was rejected on four grounds specific to this product. First, **polyglot is intrinsic, not incidental**: the AI plane is Python (agent runtime, ML tooling), the control plane is TypeScript/NestJS, and `proxy-manager`/`scheduler-service` justify Go; a monolith forces one runtime or becomes a distributed system anyway. Second, **failure isolation is a product requirement**: crawl and browser workloads interact with hostile external systems and *will* misbehave (memory spikes, hangs, poisoned content); they cannot share a failure domain with the 99.95% control plane. Third, **scaling profiles diverge by orders of magnitude**: browser pods and crawl workers scale on entirely different signals and cost curves than CRUD APIs; independent right-sizing is where the infrastructure budget is won. Fourth, **cost attribution and the kill switch** demand hard boundaries: per-agent/per-feature budget enforcement and scoped termination are far more reliable at process/service granularity.
 
-The macroservice option (one service per domain group) was closer. It was rejected because the groups internally contain both platform-scoped and tenant-scoped data (e.g., `job-intelligence-service` vs. `matching-service`), both stateless and stateful members, and both latency-critical and batch members — the coarse boundary would be re-partitioned within a year. **Tradeoff accepted:** a 32-service catalog is a real operating burden for a small team. Mitigations: a mandatory service chassis per language (observability, health, config, outbox, idempotency middleware baked in), one umbrella Helm chart, Argo CD app-of-apps, and a rule that new services require canon amendment — the catalog is a ceiling, not a floor. **Honest residual risk:** several profile-domain services (`portfolio-service`, arguably `resume-service`) could have merged with `profile-service`; they are kept separate for artifact-lifecycle and scaling reasons but a consolidation review is scheduled post-GA (§15).
+The macroservice option (one service per domain group) was closer. It was rejected because the groups internally contain both platform-scoped and tenant-scoped data (e.g., `job-intelligence-service` vs. `matching-service`), both stateless and stateful members, and both latency-critical and batch members — the coarse boundary would be re-partitioned within a year. **Tradeoff accepted:** a 30-service catalog is a real operating burden for a small team. Mitigations: a mandatory service chassis per language (observability, health, config, outbox, idempotency middleware baked in), one umbrella Helm chart, Argo CD app-of-apps, and a rule that new services require canon amendment — the catalog is a ceiling, not a floor. **Honest residual risk:** several profile-domain services (`portfolio-service`, arguably `resume-service`) could have merged with `profile-service`; they are kept separate for artifact-lifecycle and scaling reasons but a consolidation review is scheduled post-GA (§14).
 
-### 14.2 D2 — Choreography vs. Orchestration for Multi-Service Flows
+### 15.2 HLA-D2 — Choreography vs. Orchestration for Multi-Service Flows
 
 **Chosen:** orchestration via Temporal (`workflow-service`) for every multi-service transaction (application submission saga, autopilot cadence, imports, deletion pipelines); choreography (plain Kafka events) only for unidirectional fan-out (R3). **Considered:** pure choreography (each service reacts to events, compensations as compensating events); hand-rolled saga orchestrators inside owning services (state machine tables + timeouts).
 
@@ -428,21 +437,12 @@ Pure choreography scored well on decoupling and had the appeal of "the backbone 
 
 **Tradeoffs accepted:** Temporal is a serious operational dependency (self-hosted cluster, worker versioning discipline, workflow-code determinism constraints), and centralized orchestration concentrates coupling in workflow definitions. Mitigations: `workflow-service` owns the Temporal platform with a paved-road workflow SDK; workflow definitions live with the owning domain team; determinism is CI-linted; and the choreography escape hatch (R3) keeps the bus doing what it is good at. The failure mode to guard against — documented as an explicit review trigger — is orchestration creep: sync-style micro-workflows for things a single service should own.
 
-### 14.3 D3 — Single vs. Multi LLM Provider
+### 15.3 HLA-D3 — Single vs. Multi LLM Provider
 
 **Chosen:** multi-provider behind `ai-gateway` with model classes (`embed`/`small`/`medium`/`large`/`frontier`/`vision`); Anthropic Claude family as reference/primary; OpenAI as secondary; self-hosted open-weight models on vLLM as the floor and the data-residency option. **Considered:** (a) single provider (deep integration, one SDK, provider-native caching/batching everywhere); (b) uncontrolled multi-provider (teams pick per use case).
 
 Single-provider was tempting: prompt engineering is provider-flavored in practice, evals are expensive to duplicate, and provider-native prompt caching and batch APIs reward concentration. Rejected because the product's unit economics and availability both hang on inference: (1) **availability** — provider incidents and rate-limit exhaustion are common enough that the browser-workflow and draft-generation SLOs cannot depend on one vendor; (2) **cost arbitrage** — class-based routing lets the escalation ladder buy each task at the cheapest adequate tier, and cross-provider price competition is worth real margin at scale; (3) **capability coverage** — vision-heavy portal perception, long-context planning, and cheap classification are won by different models in different quarters; (4) **enterprise constraints** — data-residency and no-external-inference demands from `enterprise`/`university` tenants require the self-hosted vLLM path regardless, so the abstraction must exist anyway; (5) **negotiating position** — credible portability is leverage on committed-use pricing. Uncontrolled multi-provider was rejected immediately: it forfeits central budget enforcement, safety filtering, caching, and auditability — all canon §9 invariants.
 
 **Tradeoffs accepted:** the portability tax is real — prompts are maintained per model class with provider-specific variants where measurably better, doubling parts of the eval matrix (golden sets run per provider-class pair on the stable channel); `ai-gateway` must normalize tool-calling and streaming semantics across providers, an ongoing engineering cost; and "lowest-common-denominator" pressure can leave provider-specific capabilities unused — countered by allowing provider-specific prompt variants behind the class abstraction, gated by evals. The routing policy, not the application code, is where provider preference lives; that keeps the seam honest.
-
-## 15. Future Improvements
-
-1. **Post-GA consolidation review** of the profile domain (`portfolio-service` → `profile-service` merge candidate) with production traffic data — the catalog should shrink if reality permits (§14.1).
-2. **Cell auto-placement and live rebalancing** — phase 1 places new tenants only; phase 2 adds runbook-automated tenant migration and cell auto-provisioning on capacity signals.
-3. **Active-active edge** (canon §15 phase 2): stateless edge and read paths served from both regions; requires cell-aware global routing at DNS/gateway level.
-4. **ClickHouse analytics offload** (canon-flagged phase 2 option) once Postgres OLAP projections in `analytics-service` show contention.
-5. **Choreography-vs-orchestration audit** twice yearly: reclassify flows that drifted into the wrong mechanism (R2/R3 boundary), with workflow-count and event-consumer-count as drift indicators.
-6. **Formalized latency-budget contracts** per pipeline stage (§7 table) promoted into SLO tooling with per-stage error budgets rather than end-to-end only.
 
 Cross-references: system context in [07 — System Context](07-system-context.md); AI-plane depth in [Volume 3](../volume-3-ai-architecture/) including [18 — AI Gateway](../volume-2-core-services/18-ai-gateway.md); data conventions in [Volume 4](../volume-4-data-platform/); cells and operations in [Volume 6](../volume-6-operations/); the Universal Portal Engine in [Volume 7](../volume-7-browser-intelligence/).
