@@ -23,7 +23,7 @@ Two design stances govern every journey. First, **trust is earned in ratchets**:
 |---|---|---|---|---|---|
 | J1 | Onboarding, import, AI profile understanding | All individual | Free | — | 1 |
 | J2 | First match review | Maya, Deshawn, Priya | Free | L0 | 1 |
-| J3 | Approving an application | Maya (default posture) | Free | L1 | 1 |
+| J3 | Approving an application | Maya (default posture) | Free (assist-only submission); automated submission from Professional (Canon §12) | L1 | 1 |
 | J4 | Full autopilot day | Maya (matured), Priya | Premium (L3), Professional (L2 variant) | L2/L3 | 1–2 |
 | J5 | Interview loop | All individual | Free (prep from Professional) | L0/L1 | 1 |
 | J6 | Offer + negotiation | Elena, Maya | Premium (negotiation agent) | L0/L1 hard cap | 2 |

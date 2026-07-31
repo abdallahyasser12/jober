@@ -199,7 +199,7 @@ Full treatment in the linked volumes; the canon (§§2–16) is normative for al
 
 | # | Decision | One-line rationale | Detailed in |
 |---|---|---|---|
-| D1 | Microservices on Kubernetes (canonical 30-service catalog) rather than a modular monolith | Heterogeneous runtimes (NestJS/FastAPI/Go), independent scaling of AI and browser workloads vs CRUD plane, and isolation blast-radius control outweigh operational overhead | [Volume 2](../volume-2-core-services/) |
+| D1 | Microservices on Kubernetes (canonical 32-service catalog) rather than a modular monolith | Heterogeneous runtimes (NestJS/FastAPI/Go), independent scaling of AI and browser workloads vs CRUD plane, and isolation blast-radius control outweigh operational overhead | [Volume 2](../volume-2-core-services/) |
 | D2 | Event-driven backbone on Kafka with CloudEvents 1.0 envelopes and `aca.<domain>.<event>.v<major>` topics | Long-running autonomous work must be decoupled from the synchronous edge; versioned topics give schema evolution without breakage | [Volume 4](../volume-4-data-platform/) |
 | D3 | Temporal (`workflow-service`) for durable execution; sagas orchestrated, never choreographed | Application submission is a multi-service, multi-minute, failure-prone transaction that must survive crashes and be observable as one unit | [Volume 2](../volume-2-core-services/) |
 | D4 | Every model call goes through `ai-gateway`; no direct provider SDK use anywhere | Single choke point for routing, caching, safety filtering, token accounting, and provider failover — the vendor-agnostic seam | [18 — AI Gateway](../volume-2-core-services/18-ai-gateway.md) |

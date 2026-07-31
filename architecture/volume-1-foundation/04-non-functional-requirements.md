@@ -137,7 +137,7 @@ flowchart LR
 | NFR-003 | `realtime-gateway` delivery | p95 < 2 s (Canon §14); reconnect storm of 100 k conns absorbed ≤ 60 s | Load test: mass-disconnect replay | Must | P1 |
 | NFR-004 | No single point of failure in any request path; every service ≥ 2 replicas across ≥ 2 AZs | Zero SPOF findings | Quarterly architecture SPOF review + AZ-evacuation game day | Must | P1 |
 | NFR-005 | Graceful degradation ladder (see §11 diagram): AI budget soft/hard degrade, provider failover, region read-only, kill switch — each state reachable and reversible without deploy | State transitions ≤ 60 s | Monthly degradation drill in staging, quarterly in prod | Must | P1 |
-| NFR-006 | Browser workflow success on known portals (Canon §14) | ≥ 92% weekly | `aca.browser.session.completed.v1` vs `failed` ratio, per portal family dashboard | Must | P1 |
+| NFR-006 | Browser workflow success on known portals (Canon §14) | ≥ 92% weekly | `aca.browser.session.completed.v1` vs `aca.browser.action.failed.v1` ratio, per portal family dashboard | Must | P1 |
 | NFR-007 | DR: RPO ≤ 5 min, RTO ≤ 30 min, active-passive per Canon §15 | Measured in quarterly game day | Runbooked failover; game-day report to canon owners | Must | P1 |
 | NFR-008 | Consumer idempotency everywhere: duplicate event delivery causes zero duplicate side effects | 0 duplicate submissions/notifications in dedup tests | Chaos test: forced redelivery of 10 k events per topic | Must | P1 |
 | NFR-009 | Temporal workflow durability: HITL checkpoints and sagas survive worker/cluster restart | 0 lost checkpoints | Kill-worker test during pending approval (FR-134) | Must | P1 |

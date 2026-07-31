@@ -23,7 +23,7 @@ Every selection is scored against the decision drivers in §2. Where the market 
 |---|---|---|---|
 | D1 | Self-hostable / data-residency capable | High | Enterprise cells, EU pinning, P0/P1 data must stay in our VPC (canon §11, §15) |
 | D2 | License safety for a commercial SaaS | High | No copyleft obligations on distributed components; no rug-pull exposure without a fork path |
-| D3 | Operational maturity at 30-service scale | High | One platform team cannot babysit exotic infrastructure; prefer boring, widely-run systems |
+| D3 | Operational maturity at 32-service scale | High | One platform team cannot babysit exotic infrastructure; prefer boring, widely-run systems |
 | D4 | Ecosystem leverage | Medium | CDC, connectors, SDKs in TypeScript + Python + Go (canon §3 languages) |
 | D5 | Cloud-agnosticism | Medium | AWS reference, GKE/AKS supported (canon §3); no service hard-wired to one cloud API |
 | D6 | Cost shape at 10x scale | Medium | Per-request pricing models are hostile to agentic workloads with high event volume |
@@ -135,7 +135,7 @@ Distroless/Chainguard bases minimize CVE surface for the 32 services (drivers D2
 
 | Option | Pros | Cons | Verdict |
 |---|---|---|---|
-| Argo CD + Rollouts | UI for 30-service fleet, ApplicationSets per cell, Rollouts = canary/blue-green with metric analysis (canon §15) | Heavier than Flux | **Selected** |
+| Argo CD + Rollouts | UI for 32-service fleet, ApplicationSets per cell, Rollouts = canary/blue-green with metric analysis (canon §15) | Heavier than Flux | **Selected** |
 | Flux + Flagger | Lightweight, GitOps-pure | Weaker multi-tenant UI for ops/support; Flagger analysis less flexible than Rollouts + Prometheus queries | Rejected |
 | Spinnaker | Battle-tested pipelines | Operational weight, declining community energy | Rejected |
 

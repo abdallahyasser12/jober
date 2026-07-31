@@ -358,7 +358,7 @@ The parser pipeline assumes upstream formats **will** drift:
 - **Schema fingerprinting first.** Each artifact is fingerprinted (file inventory, header sets, key paths) against a registry of known schema versions. Known fingerprint → deterministic rules parser (fast, free, exhaustively unit-tested against fixture corpora).
 - **LLM fallback, small class, extraction-only.** Unknown or partially drifted shapes route the *unmapped remainder* through `ai-gateway` with a `small`-class extraction prompt (prompt-registry `profile.import.extract@semver`). Content is wrapped as `untrusted_content` per canon §13 — an uploaded ZIP is an untrusted input channel and prompt-injection surface. Output is JSON-Schema-validated; the model maps to the candidate-fact schema and never to live facts.
 - **Confidence gating.** Every candidate fact carries a confidence score (rules = 1.0; LLM = model-reported calibrated by offline evals). Job-level gate: mean < 0.8 or any date-arithmetic inconsistency (overlapping employment > 100%, end before start) → `quarantined`, surfaced for user-assisted mapping. 0.8 chosen from fixture-corpus evals as the point where silent-error rate drops below 1%.
-- **Drift telemetry.** New fingerprints emit `aca.profile.import.schema_drift.v1`; three occurrences of one unknown fingerprint auto-open an engineering ticket with the (PII-scrubbed) structural fingerprint. LLM fallback thus buys time while a deterministic parser is written — fallback share is a tracked cost/quality metric, not a steady state.
+- **Drift telemetry.** New fingerprints emit `aca.profile.import.schemadrift.v1`; three occurrences of one unknown fingerprint auto-open an engineering ticket with the (PII-scrubbed) structural fingerprint. LLM fallback thus buys time while a deterministic parser is written — fallback share is a tracked cost/quality metric, not a steady state.
 
 ### 4.4 Staged Merge
 
@@ -509,7 +509,7 @@ Idempotency, pagination, and RFC 9457 errors per canon §7.
 | `aca.profile.updated.v1` | profile_id | changed facets, fact_version, source | Canon core topic; synthesis + embedding trigger |
 | `aca.profile.import.completed.v1` | profile_id | import id, source, mode, stats, artifact ref | Canon core topic; portfolio-service consumes GitHub runs |
 | `aca.profile.import.failed.v1` | profile_id | import id, source, failure class | Notification + ops triage |
-| `aca.profile.import.schema_drift.v1` | source | fingerprint hash, sample structure, PII-scrubbed | Parser-engineering feed (§4.3) |
+| `aca.profile.import.schemadrift.v1` | source | fingerprint hash, sample structure, PII-scrubbed | Parser-engineering feed (§4.3) |
 | `aca.profile.insight.created.v1` | profile_id | insight id, version, based_on_fact_version | Matching/resume agents refresh context |
 | `aca.profile.completeness.changed.v1` | profile_id | old band, new band, score | Autonomy gating consumers (agent-orchestrator) |
 | `aca.profile.embedding.updated.v1` | profile_id | namespace, facet, fact_version, vector or tombstone | matching-service projection feed (§7) |

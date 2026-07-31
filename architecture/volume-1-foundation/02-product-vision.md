@@ -317,7 +317,7 @@ Binding exclusions with rationale. Changing any of these requires canon-level re
 | # | Non-goal | Rationale |
 |---|---|---|
 | N1 | Not a job board or listing destination | ACA consumes the market, it does not host it; hosting creates employer-side conflicts of interest with P6 |
-| N2 | Not an employer-side ATS | Serving both sides of the same transaction compromises the seeker-agent fiduciary posture |
+| N2 | Not an employer-side ATS | Serving both sides of the same transaction compromises the seeker-side fiduciary posture |
 | N3 | No fabrication of qualifications, experience, or identity — ever, at any autonomy level | P4; a single fabrication scandal ends the product; output validators and evidence grounding enforce |
 | N4 | No anti-bot evasion: no CAPTCHA-farm circumvention, no fingerprint spoofing to defeat exclusion, no automation against portals that clearly prohibit it after policy evaluation | Guardrail principle; `policy-agent` blocks; the sustainable position is consented, disclosed, rate-respectful automation (R1) |
 | N5 | Not a staffing agency of record; ACA never becomes the legal employer or placement fee party | Keeps incentives aligned with the seeker; avoids employment-law surface |

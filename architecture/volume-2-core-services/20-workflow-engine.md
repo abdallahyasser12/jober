@@ -94,9 +94,9 @@ Language split follows the canon's service languages: AI-plane queues in Python,
 | Workflow | Queue | Trigger | Typical / max duration | Pattern |
 |---|---|---|---|---|
 | `autopilot-daily` | `autopilot` | `scheduler-service` per-user cron event | 10 min / 24 h (L2 approval wait) | fan-out orchestration → child sagas |
-| `application-submission-saga` | `application-saga` | approved application (agent plan or user click) | 4 min / 7 d (HITL TTL) | saga with compensation + pivot (§5) |
+| `application-submission-saga` | `application-saga` | approved application (agent plan or user click) | 4 min / 72 h (HITL approval TTL, [19 §7](19-agent-orchestrator.md)) | saga with compensation + pivot (§5) |
 | `import-pipeline` | `import` | user connects LinkedIn/GitHub | 2 min / 2 h | pipeline with per-stage retry, partial-result commit |
-| `gdpr-deletion` | `compliance` | `aca.user.deleted.v1` | 1 h / 30 d (canon §11 deadline) | fan-out to all data owners, per-service ack activities, certificate of completion → audit |
+| `gdpr-deletion` | `compliance` | user-service `gdpr-orchestrator` after the 30-day grace ([12 §7.2](12-user-service.md)) | 1 h / 30 d (canon §11 deadline) | fan-out to all data owners, per-service ack activities, certificate of completion → audit; emits the `aca.user.deleted.v1` tombstone at finalization |
 | `re-embedding` | `data-maintenance` | embedding version bump (canon §10.5) | days (paced) | batched iteration, continue-as-new per 10k items, dual-read cutover step |
 | `billing-dunning` | `billing` | `aca.billing.subscription.changed.v1` payment-failed | 21 d | timer-driven retry ladder + entitlement downgrade steps |
 
@@ -111,7 +111,7 @@ The saga coordinates five services and one human. Steps, in order, with compensa
 | 1 | `reserve_quota` | billing-service | `release_quota` | plan application quota (canon §12); reservation, not consumption |
 | 2 | `finalize_documents` | agent-orchestrator (resume-agent, cover-letter-agent runs) | `orphan_artifacts` (mark for GC) | child agent runs; results are resume/letter version refs |
 | 3 | `policy_clearance` | policy-agent check | — (read-only) | site policy, consent, autonomy requirements (canon §16) |
-| 4 | `await_approval` | HITL if effective level requires ([19 §7](19-agent-orchestrator.md)) | — | signal + 7 d timer for submissions; reject ends saga cleanly |
+| 4 | `await_approval` | HITL if effective level requires ([19 §7](19-agent-orchestrator.md)) | — | signal + 72 h timer per the HITL TTL; reject ends saga cleanly |
 | 5 | `acquire_browser_session` | browser-fleet-service | `release_session` | session with session-vault sidecar credential injection |
 | 6 | `execute_portal_workflow` | browser-agent via browser-fleet | best-effort `abort_portal_flow` **before pivot only** | long activity, 15 s heartbeats; dry-run validation precedes final submit click (canon §16) |
 | 7 | `verify_submission` | browser-agent verification + confirmation capture | — (post-pivot) | confirmation signal (page state, email hook) per canon §16 |

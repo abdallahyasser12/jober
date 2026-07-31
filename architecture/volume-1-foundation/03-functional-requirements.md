@@ -421,7 +421,7 @@ The 45-day ghosted timeout reflects observed median employer response windows; i
 | Public API/SDK | FR-170–174 | `public-api-service` | §7 |
 | Plugin marketplace | FR-180–183 | `portal-intelligence-service`, `public-api-service` | §16 |
 
-Coverage check: all 30 canonical services own at least one FR except pure infrastructure (`api-gateway`, `realtime-gateway` appear as enforcement/delivery owners in FR-141, FR-113); `prompt-registry-service` and `memory-service` are covered via FR-155 and FR-136. Per-component depth (sequences, failure modes, scaling, security) for each owning service is specified in its Volume 2–8 chapter; this chapter consolidates the cross-cutting views below to avoid restating per-service material nineteen times.
+Coverage check: all 32 canonical services own at least one FR except pure infrastructure (`api-gateway`, `realtime-gateway` appear as enforcement/delivery owners in FR-141, FR-113); `prompt-registry-service` and `memory-service` are covered via FR-155 and FR-136. Per-component depth (sequences, failure modes, scaling, security) for each owning service is specified in its Volume 2–8 chapter; this chapter consolidates the cross-cutting views below to avoid restating per-service material nineteen times.
 
 ## 6. Failure Scenarios
 

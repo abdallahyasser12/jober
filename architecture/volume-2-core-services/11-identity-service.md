@@ -257,7 +257,7 @@ A **session** is created at login and is the unit of visibility and revocation. 
 
 ### 5.2 New-Device and Session Hygiene
 
-First login from an unrecognized device emits `aca.identity.login.new_device.v1` → `notification-service` ("New sign-in on …") — cheap, high-value account-takeover tripwire. Session list/revoke APIs (§11) let users and tenant admins terminate sessions; admin revocation additionally requires JIT elevation per canon §13.
+First login from an unrecognized device emits `aca.identity.login.newdevice.v1` → `notification-service` ("New sign-in on …") — cheap, high-value account-takeover tripwire. Session list/revoke APIs (§11) let users and tenant admins terminate sessions; admin revocation additionally requires JIT elevation per canon §13.
 
 ### 5.3 Step-Up Authentication
 
@@ -532,7 +532,7 @@ Errors follow RFC 9457; login failures return a deliberately uniform `invalid_cr
 |---|---|---|---|
 | `aca.identity.login.succeeded.v1` | identity_id | sid, tid, amr, acr, device label, ip prefix, risk score | audit-service, analytics-service, risk feedback |
 | `aca.identity.login.failed.v1` | email_hash | outcome, ip, risk score | audit-service, risk-engine training |
-| `aca.identity.login.new_device.v1` | identity_id | device label, ip prefix | notification-service |
+| `aca.identity.login.newdevice.v1` | identity_id | device label, ip prefix | notification-service |
 | `aca.identity.session.revoked.v1` | identity_id | sid, reason (`user`, `admin`, `refresh_reuse`, `scim`, `risk`) | audit-service, realtime-gateway |
 | `aca.identity.mfa.enrolled.v1` | identity_id | method (`webauthn`,`totp`) | notification-service, audit-service |
 | `aca.identity.credential.changed.v1` | identity_id | kind, initiator | notification-service, audit-service |

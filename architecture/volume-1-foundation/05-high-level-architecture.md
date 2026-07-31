@@ -21,7 +21,7 @@ The canon (§2) fixes the style: cloud-native microservices on Kubernetes, an ev
 
 | Style element | Driving force | Consequence accepted |
 |---|---|---|
-| Microservices (canonical 30-service catalog per canon §4) | Three heterogeneous runtimes (NestJS/TypeScript control plane, Python AI plane, Go infrastructure); wildly divergent scaling profiles (CRUD APIs vs. browser pods vs. crawl fleets); fault isolation between hostile-web workloads and the user-facing control plane | Distributed-systems tax: tracing, contract management, deployment orchestration — mitigated by paved-road service chassis and mesh (see §15.1) |
+| Microservices (canonical 32-service catalog per canon §4) | Three heterogeneous runtimes (NestJS/TypeScript control plane, Python AI plane, Go infrastructure); wildly divergent scaling profiles (CRUD APIs vs. browser pods vs. crawl fleets); fault isolation between hostile-web workloads and the user-facing control plane | Distributed-systems tax: tracing, contract management, deployment orchestration — mitigated by paved-road service chassis and mesh (see §15.1) |
 | Event-driven backbone (Kafka) | Core value chain (discover → parse → match → draft → apply → learn) is a pipeline of independent, retryable stages with fan-out consumers; producers must not know consumers | Eventual consistency in read paths; consumer idempotency is mandatory everywhere (canon §8) |
 | Durable execution (Temporal via `workflow-service`) | Application submission spans minutes-to-days (HITL approvals, portal retries); crash-safe progress and compensation cannot be hand-rolled per service | Temporal operational footprint + workflow versioning discipline (see §15.2) |
 | AI-native control plane | LLM calls are the product's marginal cost and quality driver; they must be routed, cached, budgeted, evaluated, and audited centrally | Every model call pays one extra hop through `ai-gateway`; accepted for governability (canon §9) |
@@ -99,12 +99,13 @@ flowchart TB
 |---|---|---|---|
 | `/v1/auth/*` | `identity-service` | public + session | OIDC/SAML flows, token refresh, passkeys |
 | `/v1/users/*`, `/v1/tenants/*` | `user-service` | JWT | account, membership, GDPR requests |
-| `/v1/profile/*`, `/v1/imports/*` | `profile-service` | JWT | LinkedIn/GitHub import orchestration |
+| `/v1/users/me/autonomy` | `policy-service` | JWT | autonomy settings (FR-130); longest-prefix match overrides `/v1/users/*` |
+| `/v1/profiles/*` | `profile-service` | JWT | profile CRUD, understanding snapshots, LinkedIn/GitHub import orchestration |
 | `/v1/resumes/*` | `resume-service` | JWT | upload via pre-signed S3 URLs |
 | `/v1/jobs/*`, `/v1/companies/*` | `search-service` (reads), `job-intelligence-service` (detail) | JWT | reads go to projections, never crawl stores |
 | `/v1/matches/*` | `matching-service` | JWT | scores, explanations, calibration feedback |
 | `/v1/applications/*` | `application-service` | JWT | lifecycle, approvals, timeline |
-| `/v1/agents/*`, `/v1/runs/*` | `agent-orchestrator` | JWT | autonomy settings, run inspection, kill switch |
+| `/v1/agents/*`, `/v1/runs/*` | `agent-orchestrator` | JWT | run inspection, kill switch |
 | `/v1/billing/*` | `billing-service` | JWT | plans, invoices, entitlements |
 | `/public/v1/*` | `public-api-service` | `X-API-Key` | partner surface, separate rate-limit class |
 
@@ -327,7 +328,7 @@ sequenceDiagram
 
 | Stage | Topic | Partition key | Producer | Primary consumers | Payload sketch |
 |---|---|---|---|---|---|
-| Trigger | `aca.schedule.triggered.v1` | `schedule_id` | `scheduler-service` | `job-intelligence-service`, `workflow-service` | schedule_id, kind, scope, due window |
+| Trigger | `aca.scheduler.trigger.fired.v1` | `schedule_id` | `scheduler-service` | `job-intelligence-service`, `workflow-service` | schedule_id, kind, scope, due window |
 | Discovery | `aca.job.discovered.v1` | `job_id` | `job-intelligence-service` | parse pipeline, `audit-service` | job_id, source, canonical_url, raw_ref (S3), content fingerprint |
 | Normalization | `aca.job.parsed.v1` | `job_id` | `job-intelligence-service` | `matching-service`, `search-service`, `knowledge-graph-service` | canonical Job fields, company_id, embedding_ref, provenance list |
 | Enrichment | `aca.company.enriched.v1` | `company_id` | `job-intelligence-service` | `matching-service`, `knowledge-graph-service` | company profile deltas, hiring signals |
@@ -428,7 +429,7 @@ The pipeline of §7 is instrumented as a first-class trace: `trace_id` propagate
 
 The modular monolith is the right default for most SaaS at this stage, and the case for it was strong: one deployment pipeline, in-process calls instead of a mesh, trivially consistent transactions, a fraction of the observability surface. It was rejected on four grounds specific to this product. First, **polyglot is intrinsic, not incidental**: the AI plane is Python (agent runtime, ML tooling), the control plane is TypeScript/NestJS, and `proxy-manager`/`scheduler-service` justify Go; a monolith forces one runtime or becomes a distributed system anyway. Second, **failure isolation is a product requirement**: crawl and browser workloads interact with hostile external systems and *will* misbehave (memory spikes, hangs, poisoned content); they cannot share a failure domain with the 99.95% control plane. Third, **scaling profiles diverge by orders of magnitude**: browser pods and crawl workers scale on entirely different signals and cost curves than CRUD APIs; independent right-sizing is where the infrastructure budget is won. Fourth, **cost attribution and the kill switch** demand hard boundaries: per-agent/per-feature budget enforcement and scoped termination are far more reliable at process/service granularity.
 
-The macroservice option (one service per domain group) was closer. It was rejected because the groups internally contain both platform-scoped and tenant-scoped data (e.g., `job-intelligence-service` vs. `matching-service`), both stateless and stateful members, and both latency-critical and batch members — the coarse boundary would be re-partitioned within a year. **Tradeoff accepted:** a 30-service catalog is a real operating burden for a small team. Mitigations: a mandatory service chassis per language (observability, health, config, outbox, idempotency middleware baked in), one umbrella Helm chart, Argo CD app-of-apps, and a rule that new services require canon amendment — the catalog is a ceiling, not a floor. **Honest residual risk:** several profile-domain services (`portfolio-service`, arguably `resume-service`) could have merged with `profile-service`; they are kept separate for artifact-lifecycle and scaling reasons but a consolidation review is scheduled post-GA (§14).
+The macroservice option (one service per domain group) was closer. It was rejected because the groups internally contain both platform-scoped and tenant-scoped data (e.g., `job-intelligence-service` vs. `matching-service`), both stateless and stateful members, and both latency-critical and batch members — the coarse boundary would be re-partitioned within a year. **Tradeoff accepted:** a 32-service catalog is a real operating burden for a small team. Mitigations: a mandatory service chassis per language (observability, health, config, outbox, idempotency middleware baked in), one umbrella Helm chart, Argo CD app-of-apps, and a rule that new services require canon amendment — the catalog is a ceiling, not a floor. **Honest residual risk:** several profile-domain services (`portfolio-service`, arguably `resume-service`) could have merged with `profile-service`; they are kept separate for artifact-lifecycle and scaling reasons but a consolidation review is scheduled post-GA (§14).
 
 ### 15.2 HLA-D2 — Choreography vs. Orchestration for Multi-Service Flows
 
