@@ -98,7 +98,7 @@ Context-level observations that drive the architecture:
 
 Per canon §2: cloud-native microservices on Kubernetes; event-driven backbone on Kafka (CloudEvents envelopes); AI-native control plane with a multi-agent system; multi-tenant with isolation at data, compute, and cost layers; zero-trust; observability-first; vendor-agnostic through named seams. Synchronous REST/gRPC at the edge and for control-plane reads/writes; asynchronous events for everything long-running; Temporal (via `workflow-service`) for durable execution and orchestrated sagas; outbox pattern (Debezium CDC) for atomic DB-write-plus-publish. No service touches another service's database.
 
-The platform decomposes into five planes over a shared data/event plane. The canonical service catalog (canon §4 — "the 30 services") is authoritative; the diagram below shows representative services per plane, not the full catalog.
+The platform decomposes into five planes over a shared data/event plane. The canonical service catalog (canon §4 — "the 32 services") is authoritative; the diagram below shows representative services per plane, not the full catalog.
 
 ```mermaid
 flowchart LR
@@ -177,7 +177,7 @@ sequenceDiagram
 
     SCH->>JIS: scheduled scan trigger
     JIS->>JIS: discover, dedup, normalize (job-scout-agent, job-parser-agent)
-    JIS-->>MAT: aca.job.discovered.v1
+    JIS-->>MAT: aca.job.parsed.v1
     MAT->>AIG: score fit via escalation ladder
     MAT-->>ORC: aca.match.scored.v1
     ORC->>AIG: tailor materials (resume-agent, cover-letter-agent)
@@ -249,7 +249,7 @@ Phases are scoped by risk retirement, not by feature accumulation: Phase 1 prove
 | Portal coverage | Universal Portal Engine live, seeded with mature templates for the known ATS families (Greenhouse, Lever, Ashby, Workday) | High-confidence fingerprint families cover the largest share of postings; engine generality is proven without hardcoding |
 | AI plane | `ai-gateway` with two external providers + self-hosted embeddings; escalation ladder; exact + semantic cache; `cost-controller` budgets | Cost control must exist before scale, not after |
 | Data plane | Postgres 16 + pgvector + Apache AGE, Redis, Kafka, OpenSearch, S3 | Single operational footprint per D10; every store has a named scale seam |
-| Regions | Primary region active, warm standby (active-passive), EU-resident tenants deferred | DR (RPO ≤ 5 min / RTO ≤ 30 min) without paying active-active complexity |
+| Regions | Primary region active, warm standby (active-passive); EU data-resident tenants pinned to the EU cell (canon §15) | DR (RPO ≤ 5 min / RTO ≤ 30 min) without paying active-active complexity |
 | Compliance | GDPR/CCPA day 1; SOC 2 Type II audit window opens | Canon §13 targets; enterprise sales blocked until SOC 2 lands |
 
 **Phase 1 exit criteria** (all must hold for 4 consecutive weeks — long enough to exclude lucky weeks, short enough to keep pace):
@@ -272,7 +272,7 @@ Phases are scoped by risk retirement, not by feature accumulation: Phase 1 prove
 | Portal coverage | Template learning at scale for the long tail; template pack contribution via Adapter SDK (first-party) | The engine's economics come from the long tail, not the seeded families |
 | AI plane | Batch lane for all non-interactive work; provider prompt caching exploited; frontier-class routing policies | ≈50% batch discount and cache hits are the biggest cost levers at volume |
 | Data plane | Qdrant migration for hot embedding namespaces; ClickHouse for `analytics-service`; Kafka tiered storage tuning | Executed only where Phase 1 seams show measured pressure |
-| Regions | Active-active stateless edge; EU cell for EU-resident tenants; first dedicated enterprise cells | Canon §15 phase 2 posture |
+| Regions | Active-active stateless edge; first dedicated enterprise cells | Canon §15 phase 2 posture |
 | Compliance | SOC 2 Type II report issued; WCAG 2.2 AA audit | Enterprise/university sales unblock |
 
 **Phase 2 exit criteria:** browser success ≥ 92% weekly across all `trusted` templates (not just seeded families); L3 intervention rate (user overrides + `agent-supervisor` escalations) < 5% of autopilot submissions — above that, autopilot erodes trust faster than it adds value; cost per application ≤ $0.30 at 10× Phase 1 volume — batch + cache leverage must show up in unit economics; p95 job-discovered→scored < 15 min sustained at 10× ingest.
@@ -282,7 +282,7 @@ Phases are scoped by risk retirement, not by feature accumulation: Phase 1 prove
 | Dimension | Scope | Rationale |
 |---|---|---|
 | Tenants | Enterprise GA with dedicated cells, SLAs, DPAs; university GA; public API + webhooks GA via `public-api-service` | Full canon tenant-class coverage |
-| Geography | Multi-region data residency (EU cell GA, additional residency cells as demanded); localization of matching and generation | Residency is a cell-placement problem, not a re-architecture, per D14 |
+| Geography | Multi-region data residency (additional residency cells beyond the EU cell as demanded); localization of matching and generation | Residency is a cell-placement problem, not a re-architecture, per D14 |
 | Ecosystem | Third-party template packs via the plugin framework; mobile GA (React Native) | Externalize the long-tail portal problem; meet users where they are |
 | Compliance | ISO 27001 (year 2 target); jurisdiction-specific automated-decision compliance reviews | Canon §13 |
 | Learning loop | Global strategy mining by `learning-agent` across anonymized outcome corpus; per-market calibration | The durable moat: outcomes → better strategies → better outcomes |
@@ -340,16 +340,16 @@ Platform-level failure modes and their designed responses; service-level failure
 
 Scaling dimensions and their levers. Numbers are reference capacity targets for planning, not commitments; each has a stated basis.
 
-| Dimension | Phase 1 target | Phase 2 target | Primary lever |
+| Dimension | Phase 1 (GA) | Target scale (design envelope) | Primary lever |
 |---|---|---|---|
-| Registered users | 100k | 1M | Stateless services HPA; Postgres read replicas; cells |
-| Jobs ingested/day | 250k | 2.5M | Partitioned `job` tables (time-based); Kafka partition scale-out; batch-lane parsing |
+| Registered users | 500k | 5M | Stateless services HPA; Postgres read replicas; cells |
+| Jobs ingested/day | 300k | 2M | Partitioned `job` tables (time-based); Kafka partition scale-out; batch-lane parsing |
 | Applications submitted/day | 10k | 150k | Temporal worker fleets; browser fleet pool scale-out |
-| Concurrent browser sessions | 500 | 5,000 | Ephemeral pod pool with cluster autoscaler; per-site rate budgets cap useful concurrency |
-| LLM tokens/day | 1B | 15B | Escalation ladder, caches, batch lane, self-hosted small/embed classes |
-| Realtime connections | 50k | 500k | `realtime-gateway` horizontal scale on Redis pub/sub |
+| Browser sessions/day | 8k | 100k (peak ~1,250 concurrent; 2,000-pod design) | Ephemeral pod pool with cluster autoscaler; per-site rate budgets cap useful concurrency |
+| AI calls/day at `ai-gateway` | 2.5M | 21M average (50M design peak) | Escalation ladder, caches, batch lane, self-hosted small/embed classes |
+| Peak concurrent realtime clients | 6k | 45k (100k design) | `realtime-gateway` horizontal scale on Redis pub/sub |
 
-Basis: Phase 1 assumes ~20k weekly-active users averaging 0.5 submissions/day (Professional cap of 100/mo ≈ 3.3/day ceiling) and ~12 discovered jobs scored per active user per day. Phase 2 scales 10–15× with the same shape. The binding constraints are, in order: per-site rate budgets (external courtesy limit, not internal capacity), browser fleet cost, LLM cost. Compute scales horizontally everywhere by design; the stores with vertical pressure (pgvector, AGE) have named Phase 2 seams (D10).
+Basis: the authoritative load model and its capacity math are owned by [04 — Non-Functional Requirements §2](04-non-functional-requirements.md) (150k MAU / 40k DAU at GA; 1.2M MAU / 300k DAU at target scale); this table summarizes that model. The binding constraints are, in order: per-site rate budgets (external courtesy limit, not internal capacity), browser fleet cost, LLM cost. Compute scales horizontally everywhere by design; the stores with vertical pressure (pgvector, AGE) have named Phase 2 seams (D10).
 
 ## 12. Security Considerations
 

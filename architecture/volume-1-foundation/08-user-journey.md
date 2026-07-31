@@ -45,6 +45,8 @@ This chapter fixes the urgency taxonomy that FR-111 requires documented (decisio
 | `digest` | Batched into the daily digest | email + in-app | Delivered at user's digest hour (default 18:00 local) | Protects the fatigue-suppression guardrail (FR-111) |
 | `record-only` | Timeline material, no push value | in-app feed only | n/a | Completeness without interruption |
 
+Welcome/verification and tenant-invitation messages are transactional account notices outside this taxonomy (labeled `transactional` in §12): delivered immediately on their trigger event and, like legal notices, exempt from opt-out (FR-112).
+
 ### 2.4 Journey SLO ledger
 
 Canon §14 SLOs land on specific journey moments; the journey is the reason the SLO exists.
@@ -339,12 +341,15 @@ stateDiagram-v2
     negotiating --> declined : user declines
     submitted --> withdrawn : user withdraws
     in_review --> withdrawn : user withdraws
+    submitted --> ghosted : no status signal in 45 days
+    ghosted --> in_review : late status signal
     accepted --> [*]
     rejected --> [*]
     declined --> [*]
     discarded --> [*]
     expired --> [*]
     withdrawn --> [*]
+    ghosted --> [*]
 ```
 
 Manual edits always win over automated detection (FR-082): a user-set status carries `source=user` and automation never overwrites it.
@@ -599,7 +604,7 @@ Journey-specific posture; platform-wide treatment in Volume 5.
 | N5 | Step-up authentication required for L3 enable, kill-switch disable, account deletion, and platform-rail negotiation send (§15) |
 | N6 | Rejection status changes are never push notifications by default (§12, §18.5) |
 | N7 | Submission confirmations: push for a user's first 5, digest thereafter (§12) |
-| N8 | Application lifecycle state model of §7.1 as the canonical user-facing status vocabulary, including `needs_user`, `withdrawn`, `discarded`, `expired` |
+| N8 | Application lifecycle state model of §7.1 as the canonical user-facing status vocabulary, including `needs_user`, `withdrawn`, `discarded`, `expired`, and `ghosted` (45-day no-signal timeout per [03 — Functional Requirements](03-functional-requirements.md) §4.3, reopenable on a late signal) |
 | N9 | Cohort invitation waves default 500 seats/day to protect discovery/scoring SLOs during J7 bursts (§14) |
 | N10 | Recruiter introductions hide candidate contact details until candidate acceptance; consent evaluated at query time in search filters (§10, §15) |
 | N11 | In-session profile-understanding budget: import end-to-end p95 < 5 min, understanding synthesis p95 < 60 s post-parse (§3.3) |

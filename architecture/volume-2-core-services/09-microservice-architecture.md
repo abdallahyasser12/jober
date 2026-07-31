@@ -13,7 +13,7 @@ This chapter defines the **service design standard** that every service in the c
 
 The standard exists to make 30+ services operable by a small organization. Every deviation a service takes from this template is a tax paid by every engineer who touches that service later. Deviations are therefore allowed only through the exception register in §9 (production-readiness checklist item PR-24), with a named owner and an expiry date.
 
-The canon's shorthand "the 30 services" refers to the authoritative catalog in [canon §4](../00-architecture-canon.md); the enumeration used throughout this chapter is exactly that catalog (32 canonical identifiers across five groups). Agents ([canon §5](../00-architecture-canon.md)) are logical workers inside `agent-orchestrator`'s runtime and are deliberately **not** services; nothing in this chapter applies to agents except through the services that host them.
+The canon's shorthand "the 32 services" refers to the authoritative catalog in [canon §4](../00-architecture-canon.md); the enumeration used throughout this chapter is exactly that catalog (32 canonical identifiers across five groups). Agents ([canon §5](../00-architecture-canon.md)) are logical workers inside `agent-orchestrator`'s runtime and are deliberately **not** services; nothing in this chapter applies to agents except through the services that host them.
 
 Two constraints from the canon shape everything here: **no service calls another service's database** (integration is APIs and events only), and **all model calls go through `ai-gateway`**. The chassis (§7) makes the right way the easy way: the outbox writer, the idempotent consumer, the OPA guard, and the OTel wiring come from shared libraries, not from per-team reimplementation.
 
@@ -200,10 +200,12 @@ flowchart LR
 
 ## 4. Data Ownership Map
 
-Each service owns exactly one logical schema; ownership means sole write access, migration authority, and accountability for its PII classes and retention ([canon §11](../00-architecture-canon.md)). Read models elsewhere are event-derived projections and may be stale; they never become a source of truth.
+Every data-owning service owns exactly one logical schema; ownership means sole write access, migration authority, and accountability for its PII classes and retention ([canon §11](../00-architecture-canon.md)). The two stateless edge services are listed for completeness — they own no durable schema, and that absence is itself an architectural invariant. Read models elsewhere are event-derived projections and may be stale; they never become a source of truth.
 
 | Service | Primary store | Key entities | Max PII | Notes (partitioning / retention) |
 |---|---|---|---|---|
+| `api-gateway` | — (stateless) | — | — | config-as-code only; rate-limit buckets and snapshot caches live in gateway-scoped Redis and are reconstructible, not owned data |
+| `realtime-gateway` | Redis (ephemeral) | connection registry | P2 | user↔connection mappings, TTL-expired seconds after disconnect; nothing durable |
 | `identity-service` | Postgres | identities, credentials, sessions, refresh tokens | P1 | Argon2id password hashes; sessions also in Redis |
 | `policy-service` | Postgres | policies, consents, approval rules | P2 | OPA bundles built from here; versioned, signed |
 | `user-service` | Postgres | users, tenants, memberships | P1 | field-level AES-256-GCM on identity PII |
@@ -348,7 +350,7 @@ CREATE TABLE consumed_event (
 
 | Setting | Default | Rationale |
 |---|---|---|
-| Postgres pool per pod | 20 connections | 30 services × replicas must fit Aurora connection limits; RDS Proxy/pgbouncer absorbs bursts |
+| Postgres pool per pod | 20 connections | 32 services × replicas must fit Aurora connection limits; RDS Proxy/pgbouncer absorbs bursts |
 | HTTP server request timeout | 15 s | above the gateway's strictest upstream timeout so the gateway, not the service, owns the client-facing deadline |
 | Kafka consumer `max.poll.interval` | 300 s | longest legal message-processing stall before rebalance; AI-plane consumers doing model calls need headroom |
 | Consumer batch size | 100 records | balances throughput vs. per-key ordering latency |
@@ -518,7 +520,7 @@ Chapter-level failure modes of the *architecture standard itself*; per-service f
 | Pact Broker outage posture | fail-closed (deploy freeze) | fail-open | availability of deploys traded for integration safety; break-glass covers true emergencies |
 | Tiering | 3 tiers by blast radius | uniform "everything is critical" | uniform rigor overloads small teams and dilutes on-call attention; tiering concentrates rigor where the SLO math says it matters |
 | Team topology | stream-aligned by domain + 2 complicated-subsystem teams | component teams (DB team, API team); one platform monolith team | stream alignment duplicates some skills across teams; buys end-to-end ownership matching the communication matrix, minimizing hand-offs on the critical path |
-| Agents as services | rejected (canon D11) | one microservice per agent | kept: 23 agents as services would multiply deploy/ops surface with no isolation benefit; supervision centralizes in `agent-orchestrator` |
+| Agents as services | rejected ([canon §5](../00-architecture-canon.md)) | one microservice per agent | kept: 23 agents as services would multiply deploy/ops surface with no isolation benefit; supervision centralizes in `agent-orchestrator` |
 
 ---
 

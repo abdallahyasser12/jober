@@ -79,7 +79,7 @@ flowchart TB
 | `risk-engine` | Inline login risk scoring | Velocity checks, IP/ASN reputation, impossible travel, device-fingerprint continuity, breached-password verdicts; emits allow / step-up / deny |
 | `key-manager` | Signing-key custody | Ed25519 key generation in Vault (Transit), `kid` lifecycle, JWKS publication, scheduled + emergency rotation |
 
-**Interactions.** Downstream, every service trusts identity only through the JWKS endpoint and the claims contract (§4.1). Synchronous calls out of `identity-service` are limited to `user-service` (`EnsureUser` during JIT provisioning, §6.3) and Vault; everything else (audit trail, notification of new-device login, analytics) leaves via Kafka events (§10) so a downstream outage can never block a login.
+**Interactions.** Downstream, every service trusts identity only through the JWKS endpoint and the claims contract (§4.1). Synchronous calls out of `identity-service` are limited to `user-service` (`EnsureUser` during JIT provisioning, §7.2) and Vault; everything else (audit trail, notification of new-device login, analytics) leaves via Kafka events (§10) so a downstream outage can never block a login.
 
 **Why wrap Ory instead of using it bare.** Kratos and Hydra are deliberately generic; ACA needs tenant-aware claims (`tid`), agent delegation (token exchange), the risk engine inline in the login flow, SCIM, and SAML — none of which Ory provides out of the box in our self-hosted configuration. The facade keeps Ory upgradeable (we consume its stable APIs, never its DB) and keeps the vendor seam honest: replacing Ory means reimplementing the facade's ports, not re-integrating thirty services.
 
@@ -96,7 +96,7 @@ OAuth 2.1 baseline: no implicit grant, no resource-owner-password grant, PKCE ma
 | Token exchange (RFC 8693) | `agent-orchestrator` only | ≤ 15-min delegated access, no refresh | Converts a user's standing automation grant into a narrow per-run token with `act` claim (§4.4) |
 | Refresh token | Holders of a valid refresh token | Rotating, family-tracked | §4.3 |
 
-Device-authorization grant is deliberately out of scope for Phase 1 (no TV/CLI login surface); see §16.
+Device-authorization grant is deliberately out of scope for Phase 1 (no TV/CLI login surface); see §17.
 
 ### 3.2 Interactive Login — Authorization Code + PKCE
 
@@ -556,7 +556,7 @@ All publishes use the transactional outbox (Debezium CDC) per canon §8.
 | Anomalous logins | risk-engine: impossible travel (> 900 km/h implied velocity), new ASN + new device, Tor/known-proxy lists, failure-burst context | Step-up rather than block on medium scores — false positives cost trust; hard deny only ≥ 0.9 score |
 | Enumeration | Uniform error responses and timings on login, registration, recovery | Constant-time compare on hashes; registration returns "check your email" regardless |
 
-The risk engine is deliberately rules-first in Phase 1 (auditable, tunable, no training-data cold start); its features and outcomes are logged to `learning-pipeline` so a learned scorer can shadow-evaluate before ever gating a login (§16).
+The risk engine is deliberately rules-first in Phase 1 (auditable, tunable, no training-data cold start); its features and outcomes are logged to `learning-pipeline` so a learned scorer can shadow-evaluate before ever gating a login (§17).
 
 ## 12. Threat Model (STRIDE Summary)
 

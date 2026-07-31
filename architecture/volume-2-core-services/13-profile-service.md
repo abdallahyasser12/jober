@@ -398,7 +398,7 @@ Scheduled refreshes (GitHub monthly, LinkedIn per-mode availability) are `schedu
 
 ### 5.1 profile-synthesis-agent
 
-**Extension to canon §5** (recorded in §12 Alternatives; proposed for canon promotion): `profile-synthesis-agent` — mission: *transform the structured profile plus evidence into versioned, schema-valid ProfileInsight snapshots that downstream matching and generation consume.* It runs on `agent-orchestrator` like all agents (canon: agents are logical workers, not services) at autonomy `L0` — it only writes suggestions and snapshots, never user-visible external actions, so no HITL checkpoint is required beyond schema validation.
+**Extension to canon §5** (recorded in §15 Alternatives; proposed for canon promotion): `profile-synthesis-agent` — mission: *transform the structured profile plus evidence into versioned, schema-valid ProfileInsight snapshots that downstream matching and generation consume.* It runs on `agent-orchestrator` like all agents (canon: agents are logical workers, not services) at autonomy `L0` — it only writes suggestions and snapshots, never user-visible external actions, so no HITL checkpoint is required beyond schema validation.
 
 Triggers (event-driven, debounced):
 
@@ -575,7 +575,7 @@ Traces: import jobs carry one trace across fetch/parse/merge; synthesis runs joi
 - **Third-party verifications** (credential APIs, education verification) as new `EVIDENCE_ITEM.origin` classes.
 - **Cross-profile learning:** `learning-pipeline`-derived priors ("users with this stack succeed in these role families") feeding synthesis as explicitly-marked population evidence — never presented as the user's own facts.
 - **Multilingual profiles:** facet-level language tags with cross-lingual `embed` models; synthesis prompt localization via prompt-registry channels.
-- **Structured career-gap narratives** (parental leave, visa transitions) as first-class facts with generation-agent handling rules, replacing today's free-text gap explanations.
+- **Structured career-gap narratives** (parental leave, visa transitions) as first-class facts with explicit handling rules for `resume-agent` and `cover-letter-agent`, replacing today's free-text gap explanations.
 - **Import connector SDK:** the LinkedIn/GitHub pipeline contract (§4.1) generalized to a plugin surface (Xing, Behance, university transcript systems) aligned with the plugin framework in [Volume 8](../volume-8-business-platform/).
 
 ## 15. Alternatives Considered & Tradeoffs

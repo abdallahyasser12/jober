@@ -370,30 +370,32 @@ sequenceDiagram
 
 ```mermaid
 stateDiagram-v2
-  [*] --> draft_generated
-  draft_generated --> pending_approval : draft complete
+  [*] --> drafted
+  drafted --> pending_approval : draft complete
   pending_approval --> approved : user or batch approval
-  pending_approval --> discarded : rejected or expired
+  pending_approval --> discarded : rejected
+  pending_approval --> expired : approval window lapses
   approved --> submitting : submission saga started
   submitting --> submitted : post-submit verification captured
-  submitting --> failed_submission : retries exhausted
-  failed_submission --> submitting : recovery retry
-  failed_submission --> discarded : user abandons
+  submitting --> submission_failed : retries exhausted
+  submission_failed --> submitting : recovery retry
+  submission_failed --> discarded : user abandons
   submitted --> in_review : status signal detected
-  in_review --> interview : interview scheduled
+  in_review --> interviewing : interview scheduled
   in_review --> rejected : rejection detected
-  interview --> offer : offer received
-  offer --> accepted : user accepts
-  offer --> declined : user declines
+  interviewing --> offer_received : offer received
+  offer_received --> accepted : user accepts
+  offer_received --> declined : user declines
   submitted --> ghosted : no signal after 45 days
   accepted --> [*]
   rejected --> [*]
   declined --> [*]
   discarded --> [*]
+  expired --> [*]
   ghosted --> [*]
 ```
 
-The 45-day ghosted timeout reflects observed median employer response windows; it is a configurable constant owned by `application-service`, and `ghosted` applications remain reopenable on late signals.
+The 45-day ghosted timeout reflects observed median employer response windows; it is a configurable constant owned by `application-service`, and `ghosted` applications remain reopenable on late signals. The full user-facing status vocabulary — adding `needs_user`, `negotiating`, and `withdrawn` — is fixed in [08 — User Journey](08-user-journey.md) §7.1.
 
 ## 5. Traceability Summary
 

@@ -241,7 +241,7 @@ Security architecture detail lives in Volume 5; these are the measurable platfor
 | NFR-049 | Anomaly detection on agent behavior (`security-agent`): flag-to-triage ≤ 15 min for high-severity | Queue SLA | Synthetic anomaly injection | Should | P2 |
 | NFR-050 | GDPR/CCPA from day 1: erasure ≤ 30 d (hard delete + tombstones), DSAR export ≤ 30 d statutory with 72 h automated target | Verified erasure job (FR-008) | Erasure verification report per request | Must | P1 |
 | NFR-051 | Consent precedes processing: no agent action on a data category without a live consent record (FR-006) | 0 consentless actions | Policy-gate audit sampling | Must | P1 |
-| NFR-052 | EU data residency: EU-resident tenants pinned to EU cell; personal data does not leave region (Canon §15) | Residency assertions in data plane | Data-flow audit + egress policy tests | Must | P2 |
+| NFR-052 | EU data residency: EU-resident tenants pinned to EU cell; personal data does not leave region (Canon §15) | Residency assertions in data plane | Data-flow audit + egress policy tests | Must | P1 |
 | NFR-053 | SOC 2 Type II in year 1; ISO 27001 year 2 (Canon §13) | Audit milestones met | External audit | Must | P1/P2 |
 | NFR-054 | AI transparency: every AI-generated artifact labeled; users can view evidence/inputs behind drafts | 100% artifacts attributed | UI + API contract tests | Must | P1 |
 | NFR-055 | Anonymized analytics cohorts k ≥ 20 (FR-121); no re-identification via benchmark queries | k-anonymity enforced at query layer | Privacy test suite | Must | P2 |

@@ -110,7 +110,7 @@ Sections 4–13 justify each layer. Each flagship decision gets a tradeoff table
 
 ### 4.1 Kubernetes 1.30+ (EKS reference)
 
-**Purpose.** Single substrate for 30 services, worker fleets, browser pods, and self-hosted model serving. **Responsibilities:** scheduling, autoscaling, network policy, workload identity attachment points. **Interactions:** everything; notably `browser-fleet-service` requires RuntimeClass support for gVisor and fast pod churn (thousands of ephemeral pods/day).
+**Purpose.** Single substrate for 32 services, worker fleets, browser pods, and self-hosted model serving. **Responsibilities:** scheduling, autoscaling, network policy, workload identity attachment points. **Interactions:** everything; notably `browser-fleet-service` requires RuntimeClass support for gVisor and fast pod churn (thousands of ephemeral pods/day).
 
 | Option | Pros | Cons | Verdict |
 |---|---|---|---|
@@ -129,7 +129,7 @@ Terraform for provider breadth and team familiarity; Terragrunt for DRY per-envi
 
 ### 4.3 Packaging — Docker (distroless/Chainguard), Helm
 
-Distroless/Chainguard bases minimize CVE surface for the 30 services (drivers D2, security canon). **Note:** Chainguard's free tier tracks `latest` only; version-pinned images require a subscription. Decision: mirror all base images into our registry, prefer Google distroless (Apache-2.0) where a Chainguard subscription is not justified, and rebuild weekly. One umbrella Helm chart plus per-service charts (canon §3): the umbrella pins the tested combination per release train; per-service charts allow independent canary.
+Distroless/Chainguard bases minimize CVE surface for the 32 services (drivers D2, security canon). **Note:** Chainguard's free tier tracks `latest` only; version-pinned images require a subscription. Decision: mirror all base images into our registry, prefer Google distroless (Apache-2.0) where a Chainguard subscription is not justified, and rebuild weekly. One umbrella Helm chart plus per-service charts (canon §3): the umbrella pins the tested combination per release train; per-service charts allow independent canary.
 
 ### 4.4 GitOps — Argo CD + Argo Rollouts; GitHub Actions CI
 
@@ -149,10 +149,10 @@ CI on GitHub Actions because the repos live on GitHub (D4); self-hosted runners 
 
 | Criterion | Istio | Linkerd | None (NetworkPolicy + app mTLS) |
 |---|---|---|---|
-| mTLS + SPIFFE/SPIRE integration | Native, mature | mTLS yes; SPIRE integration weaker | Hand-rolled in 30 services — rejected outright |
+| mTLS + SPIFFE/SPIRE integration | Native, mature | mTLS yes; SPIRE integration weaker | Hand-rolled in 32 services — rejected outright |
 | L7 authz (per-method, ext-authz) | Rich (AuthorizationPolicy + ext-authz to OPA) | Basic policy; no ext-authz equivalent | N/A |
 | Egress control (egress gateway, per-workload allowlists) | First-class | Limited | L3/L4 only |
-| Operational cost | High (mitigated by ambient mode, phase 2 evaluation) | Low | Hidden but higher (cert rotation ×30 services) |
+| Operational cost | High (mitigated by ambient mode, phase 2 evaluation) | Low | Hidden but higher (cert rotation ×32 services) |
 | Licensing / stewardship | Apache-2.0, CNCF graduated | Apache-2.0, but stable binary distributions gated behind Buoyant Enterprise since 2024 — supply risk | — |
 | Verdict | **Selected** | Rejected | Rejected |
 
@@ -203,7 +203,7 @@ Next.js 15 (App Router, RSC) self-hosted on Kubernetes behind a CDN — not on V
 
 Pulsar's native multi-tenancy was seriously considered for the cell model; rejected because the Debezium/Connect ecosystem gap breaks the outbox pattern the canon mandates, and two-tier storage (brokers + BookKeeper) roughly doubles the moving parts. SQS/SNS fails four criteria at once. **Schema Registry: Karapace** (Apache-2.0, Confluent-API-compatible) — Confluent's own registry is under the Confluent Community License, which prohibits offering it as part of a competing service and complicates enterprise on-prem cells; API compatibility keeps client tooling standard (decision recorded, §22).
 
-Baseline configuration (defaults, tuned per topic in Volume 4): 12 partitions per core topic (headroom for consumer parallelism at 10x without repartition churn), RF=3 min.insync.replicas=2 (survive one broker loss without accepting silent underreplication), 7-day hot retention with tiered storage beyond (canon §11).
+Baseline configuration (defaults, tuned per topic in Volume 4): 32 partitions per tenant-keyed core topic and 64 for entity-keyed discovery topics, per [05 — High-Level Architecture](05-high-level-architecture.md) §11 (headroom for consumer parallelism at 10x without repartition churn), RF=3 min.insync.replicas=2 (survive one broker loss without accepting silent underreplication), 7-day hot retention with tiered storage beyond (canon §11).
 
 ## 8. Durable Execution — Temporal vs Camunda vs Step Functions
 
@@ -238,7 +238,7 @@ One logical DB per service (canon §11). Deciding factor over MySQL/CockroachDB/
 | Ops | Zero new systems | One new system | None (but D1 fail) |
 | Verdict | **Selected phase 1** | **Named scale path** | Rejected |
 
-The `embedding-store` interface (canon §3) is the seam: namespace-scoped upsert/query/delete with dimension-versioned indices (canon §10.5). Migration trigger to Qdrant: any namespace exceeding ~10M vectors, p95 filtered-kNN > 100 ms sustained, or index-build memory pressure on the owning service's DB. Dual-read during migration per canon §10.5. Weaviate (BSD-3) and Milvus (Apache-2.0) remain acceptable substitutes behind the same interface if Qdrant's trajectory changes; OpenSearch k-NN was rejected as primary (index refresh semantics and recall/latency tuning inferior for high-churn per-user namespaces).
+The `embedding-store` interface (canon §3) is the seam: namespace-scoped upsert/query/delete with dimension-versioned indices (canon §10.5). Migration trigger to Qdrant (NFR-027 in [04 — Non-Functional Requirements](04-non-functional-requirements.md)): > 25 M active vectors or kNN p95 > 200 ms sustained 7 days; any single namespace approaching ~10 M vectors, or index-build memory pressure on the owning service's DB, is the leading indicator to rehearse the migration. Dual-read during migration per canon §10.5. Weaviate (BSD-3) and Milvus (Apache-2.0) remain acceptable substitutes behind the same interface if Qdrant's trajectory changes; OpenSearch k-NN was rejected as primary (index refresh semantics and recall/latency tuning inferior for high-churn per-user namespaces).
 
 ### 9.3 Graph store — Apache AGE (phase 1) → Neo4j (phase 2)
 
@@ -491,7 +491,7 @@ The recurring pattern — buffer at the boundary, degrade by tier, protect user-
 ## 18. Scaling Strategy
 
 - **Kubernetes:** cluster-per-cell (canon §15); HPA on RPS/lag/queue-depth per service class; Karpenter-style node autoscaling with dedicated pools (general / browser-gVisor / GPU). Browser fleet is the spikiest consumer — isolated node pool prevents it starving the control plane.
-- **Kafka:** partitions sized for 10x (12/topic baseline, §7); scaling = broker adds + partition reassignment (rehearsed); per-tenant ordering preserved by key discipline, so partition count changes are the only re-keying hazard — done only at major topic versions.
+- **Kafka:** partitions sized for 10x (32/64 baseline, §7); scaling = broker adds + partition reassignment (rehearsed); per-tenant ordering preserved by key discipline, so partition count changes are the only re-keying hazard — done only at major topic versions.
 - **Temporal:** 4096 history shards (§8) sized so worker fleets, not the cluster, are the scaling knob; per-domain task queues (autopilot, submission, import) scale worker deployments independently.
 - **Postgres:** vertical first (boring and effective), read replicas for read-model-heavy services, time-based partitioning for high-volume tables and hash-by-`tenant_id` for cells (canon §11); services that outgrow single-writer Postgres are candidates for cell splitting before database exotics.
 - **pgvector → Qdrant:** trigger-based migration path (§9.2) — the scaling strategy *is* the seam.
@@ -552,7 +552,7 @@ Every §4–§13 section carries its own tradeoff table; this section records th
 | N3 | Temporal: 4096 history shards at cluster creation; visibility store on OpenSearch (§8) |
 | N4 | Redis pinned to the 7.2.x BSD line; Valkey named successor (§9.4) |
 | N5 | OpenTofu weekly plan-parity job; OpenBao quarterly integration suite (§15) |
-| N6 | Kafka baseline: 12 partitions/core topic, RF=3, min.insync.replicas=2 (§7) |
+| N6 | Kafka baseline: 32 partitions per tenant-keyed core topic (64 for entity-keyed discovery topics), RF=3, min.insync.replicas=2 (§7) |
 | N7 | CVE SLA: critical 48 h / high 7 d / medium 30 d (§14) |
 | N8 | Grafana-stack AGPL components never shipped inside customer-operated cells; cells export OTLP (§12, §16) |
 | N9 | License allowlist enforced in CI as a merge gate (§16, §19) |

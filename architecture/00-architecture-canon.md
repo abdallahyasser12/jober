@@ -123,7 +123,7 @@ Service names are **kebab-case, singular domain + `-service` suffix omitted in p
 | `audit-service` | Immutable audit log (hash-chained), compliance exports | audit events (append-only) |
 | `public-api-service` | Public REST API + webhooks for integrations/SDK; API key management | api keys, webhook endpoints |
 
-> Chapters may reference "the 30 services" — the catalog above is the authoritative list. New services require canon amendment.
+> Chapters may reference "the 32 services" — the catalog above (4 edge/identity + 4 profile + 3 job + 12 automation/AI + 9 experience/business) is the authoritative list. New services require canon amendment.
 
 ## 5. Canonical Agent Catalog
 

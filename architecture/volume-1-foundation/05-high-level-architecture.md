@@ -9,7 +9,7 @@
 
 ## 1. Overview
 
-This chapter is the C4 Level 1–2 view of the AI Career Agent platform: the architecture style and the forces that justify it, the container decomposition of the canonical service catalog (canon §4 — "the 30 services") grouped by domain, the rules that decide when two containers interact synchronously versus asynchronously, the canonical agent loop that every one of the 23 agents executes, the end-to-end data flow from job discovery to learning, and the cell-based multi-tenancy model that bounds blast radius and enables data residency. It closes with the three macro-decisions that most shaped this architecture — decomposition granularity, coordination style, and LLM provider strategy — with the alternatives that were seriously considered and rejected.
+This chapter is the C4 Level 1–2 view of the AI Career Agent platform: the architecture style and the forces that justify it, the container decomposition of the canonical service catalog (canon §4 — "the 32 services") grouped by domain, the rules that decide when two containers interact synchronously versus asynchronously, the canonical agent loop that every one of the 23 agents executes, the end-to-end data flow from job discovery to learning, and the cell-based multi-tenancy model that bounds blast radius and enables data residency. It closes with the three macro-decisions that most shaped this architecture — decomposition granularity, coordination style, and LLM provider strategy — with the alternatives that were seriously considered and rejected.
 
 The chapter deliberately stays at Level 2. Per-service internals (C4 Level 3) live in the service chapters of [Volume 2](../volume-2-core-services/), [Volume 3](../volume-3-ai-architecture/), [Volume 7](../volume-7-browser-intelligence/), and [Volume 8](../volume-8-business-platform/). The system-context view (C4 Level 1, actors and external systems) is owned by [07 — System Context](07-system-context.md); it is summarized here only where needed to motivate container boundaries.
 
@@ -304,7 +304,8 @@ sequenceDiagram
     MS->>K: aca.match.scored.v1
     K-->>AO: deliver match above threshold
     AO->>AO: resume-agent and cover-letter-agent draft materials
-    AO->>K: aca.application.drafted.v1
+    AO->>AS: create application draft
+    AS->>K: aca.application.drafted.v1
     alt autonomy L0 or L1 or L2
         AO->>K: aca.agent.approval.requested.v1
         AS->>K: aca.application.approved.v1 after user action
@@ -331,7 +332,7 @@ sequenceDiagram
 | Normalization | `aca.job.parsed.v1` | `job_id` | `job-intelligence-service` | `matching-service`, `search-service`, `knowledge-graph-service` | canonical Job fields, company_id, embedding_ref, provenance list |
 | Enrichment | `aca.company.enriched.v1` | `company_id` | `job-intelligence-service` | `matching-service`, `knowledge-graph-service` | company profile deltas, hiring signals |
 | Match | `aca.match.scored.v1` | `tenant_id` | `matching-service` | `agent-orchestrator`, `notification-service`, `analytics-service` | tenant_id, user_id, job_id, score, explanation_ref |
-| Draft | `aca.application.drafted.v1` | `tenant_id` | `agent-orchestrator` | `application-service`, `notification-service` | app_id, artifact refs (resume version, letter), autonomy_level |
+| Draft | `aca.application.drafted.v1` | `tenant_id` | `application-service` | `notification-service`, `realtime-gateway` | app_id, artifact refs (resume version, letter), autonomy_level |
 | Approval | `aca.agent.approval.requested.v1` | `tenant_id` | `agent-orchestrator` | `notification-service`, `realtime-gateway` | run_id, action_class, expiry, evidence refs |
 | Approved | `aca.application.approved.v1` | `tenant_id` | `application-service` | `agent-orchestrator`, `audit-service` | app_id, approver, approval mode |
 | Submission | `aca.application.submitted.v1` | `tenant_id` | `application-service` | `analytics-service`, `notification-service`, `learning-pipeline`, `billing-service` | app_id, portal family, verification evidence ref |
